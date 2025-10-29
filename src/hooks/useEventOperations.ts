@@ -128,5 +128,31 @@ export const useEventOperations = (editing: boolean, onSave?: () => void) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  return { events, fetchEvents, saveEvent, deleteEvent };
+  /**
+   * 같은 repeat.id를 가진 모든 반복 일정을 수정합니다.
+   * @param repeatId - 반복 시리즈 ID
+   * @param updateData - 수정할 필드 (title, startTime, endTime 등)
+   */
+  const updateRecurringEvents = async (repeatId: string, updateData: Partial<Event>) => {
+    try {
+      const response = await fetch(`/api/recurring-events/${repeatId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updateData),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update recurring events');
+      }
+
+      await fetchEvents();
+      onSave?.();
+      enqueueSnackbar('반복 일정이 모두 수정되었습니다.', { variant: 'success' });
+    } catch (error) {
+      console.error('Error updating recurring events:', error);
+      enqueueSnackbar('반복 일정 수정 실패', { variant: 'error' });
+    }
+  };
+
+  return { events, fetchEvents, saveEvent, deleteEvent, updateRecurringEvents };
 };

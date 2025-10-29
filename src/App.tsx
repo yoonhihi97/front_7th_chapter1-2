@@ -99,10 +99,13 @@ function App() {
     editEvent,
   } = useEventForm();
 
-  const { events, saveEvent, deleteEvent } = useEventOperations(Boolean(editingEvent), () => {
-    setEditingEvent(null);
-    resetForm();
-  });
+  const { events, saveEvent, deleteEvent, updateRecurringEvents } = useEventOperations(
+    Boolean(editingEvent),
+    () => {
+      setEditingEvent(null);
+      resetForm();
+    }
+  );
 
   const { notifications, notifiedEvents, setNotifications } = useNotifications(events);
   const { view, setView, currentDate, holidays, navigate } = useCalendarView();
@@ -151,6 +154,29 @@ function App() {
     };
 
     await saveEvent(singleEventData);
+  };
+
+  /**
+   * 같은 repeat.id를 가진 모든 반복 일정을 수정합니다.
+   * "아니오" 버튼 클릭 시 호출됩니다.
+   */
+  const handleEditAllEvents = async () => {
+    setIsEditRepeatDialogOpen(false);
+
+    if (!editingEvent || !(editingEvent.repeat as any).id) return;
+
+    // 전체 수정용 데이터 (date, repeat 제외)
+    const updateData = {
+      title,
+      startTime,
+      endTime,
+      description,
+      location,
+      category,
+      notificationTime,
+    };
+
+    await updateRecurringEvents((editingEvent.repeat as any).id, updateData);
   };
 
   /**
@@ -260,7 +286,9 @@ function App() {
                           >
                             <Stack direction="row" spacing={1} alignItems="center">
                               {isNotified && <Notifications fontSize="small" />}
-                              {event.repeat.type !== 'none' && <EventRepeat fontSize="small" />}
+                              {event.repeat.type !== 'none' && (
+                                <EventRepeat fontSize="small" data-testid="EventRepeatIcon" />
+                              )}
                               <Typography
                                 variant="caption"
                                 noWrap
@@ -349,7 +377,7 @@ function App() {
                                   <Stack direction="row" spacing={1} alignItems="center">
                                     {isNotified && <Notifications fontSize="small" />}
                                     {event.repeat.type !== 'none' && (
-                                      <EventRepeat fontSize="small" />
+                                      <EventRepeat fontSize="small" data-testid="EventRepeatIcon" />
                                     )}
                                     <Typography
                                       variant="caption"
@@ -709,7 +737,7 @@ function App() {
           <Button onClick={handleEditSingleEvent} variant="contained">
             예
           </Button>
-          <Button onClick={() => setIsEditRepeatDialogOpen(false)}>아니오</Button>
+          <Button onClick={handleEditAllEvents}>아니오</Button>
         </DialogActions>
       </Dialog>
 

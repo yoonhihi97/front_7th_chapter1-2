@@ -36,4 +36,40 @@ export const handlers = [
 
     return new HttpResponse(null, { status: 404 });
   }),
+
+  http.put('/api/recurring-events/:repeatId', async ({ params, request }) => {
+    const { repeatId } = params;
+    const updateData = (await request.json()) as Partial<Event>;
+
+    // 같은 repeatId를 가진 모든 일정 찾기 및 수정
+    const updatedEvents = events.map((event) => {
+      if ((event.repeat as any)?.id === repeatId) {
+        return {
+          ...event,
+          title: updateData.title !== undefined ? updateData.title : event.title,
+          startTime: updateData.startTime !== undefined ? updateData.startTime : event.startTime,
+          endTime: updateData.endTime !== undefined ? updateData.endTime : event.endTime,
+          description: updateData.description !== undefined ? updateData.description : event.description,
+          location: updateData.location !== undefined ? updateData.location : event.location,
+          category: updateData.category !== undefined ? updateData.category : event.category,
+          notificationTime:
+            updateData.notificationTime !== undefined ? updateData.notificationTime : event.notificationTime,
+          // id, date, repeat는 유지
+        };
+      }
+      return event;
+    });
+
+    // events 배열 업데이트
+    events.length = 0;
+    events.push(...updatedEvents);
+
+    const updatedSeries = updatedEvents.filter((e) => (e.repeat as any)?.id === repeatId);
+
+    if (updatedSeries.length === 0) {
+      return new HttpResponse(null, { status: 404 });
+    }
+
+    return HttpResponse.json(updatedSeries);
+  }),
 ];
