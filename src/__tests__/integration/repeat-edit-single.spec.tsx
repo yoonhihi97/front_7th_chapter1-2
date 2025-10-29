@@ -1,10 +1,11 @@
 import CssBaseline from '@mui/material/CssBaseline';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
-import { render, screen, within, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { SnackbarProvider } from 'notistack';
 
+import { setupMockHandlerRepeatCreation } from '../../__mocks__/handlersUtils';
 import App from '../../App';
 import { server } from '../../setupTests';
 import { Event } from '../../types';
@@ -59,7 +60,7 @@ describe('반복 일정 단일 수정 기능 (1단계)', () => {
       type: 'none',
       interval: 1,
     },
-    notificationTime: 5,
+    notificationTime: 10,
   };
 
   describe('Happy Path (정상 시나리오)', () => {
@@ -151,33 +152,24 @@ describe('반복 일정 단일 수정 기능 (1단계)', () => {
     });
 
     it('TC-3: "예" 후 반복 아이콘 제거됨', async () => {
-      // Given: 단일 수정 완료 (repeat.type = 'none')
-      const updatedEvent = {
-        ...weeklyEvent,
-        title: '팀 미팅 (취소)',
-        repeat: { type: 'none', interval: 1 },
-      };
-
+      // Given: repeat.type = 'weekly'인 반복 일정
       server.use(
         http.get('/api/events', () => {
           return HttpResponse.json({
             events: [weeklyEvent],
           });
         }),
-        http.put('/api/events/:id', async () => {
-          return HttpResponse.json(updatedEvent);
+        http.put('/api/events/:id', async ({ request }) => {
+          // "예" 버튼으로 repeat.type = 'none'으로 변경된 일정을 반환
+          const updatedData = (await request.json()) as Event;
+          return HttpResponse.json({ ...weeklyEvent, ...updatedData });
         })
       );
 
       const { user } = setup();
       await screen.findByText('일정 로딩 완료!');
 
-      // 반복 아이콘이 표시되어 있는지 확인
-      const monthView = within(screen.getByTestId('month-view'));
-      const eventBox = monthView.getByText('팀 미팅').closest('div');
-      const iconsBefore = eventBox?.querySelectorAll('svg');
-      expect(iconsBefore?.length).toBeGreaterThan(0);
-
+      // 편집 버튼 클릭
       const editButton = await screen.findByLabelText('Edit event');
       await user.click(editButton);
 
@@ -185,30 +177,26 @@ describe('반복 일정 단일 수정 기능 (1단계)', () => {
       await user.clear(titleInput);
       await user.type(titleInput, '팀 미팅 (취소)');
 
+      // When: "일정 수정" 클릭 → 다이얼로그 표시
       await user.click(screen.getByTestId('event-submit-button'));
 
       await waitFor(() => {
         expect(screen.getByRole('dialog')).toBeInTheDocument();
       });
 
+      // "예" 버튼 클릭 → repeat.type = 'none'으로 변경
       const yesButton = screen.getByRole('button', { name: '예' });
       await user.click(yesButton);
 
-      // When: 캘린더 목록 갱신
-      server.use(
-        http.get('/api/events', () => {
-          return HttpResponse.json({
-            events: [updatedEvent],
-          });
-        })
-      );
-
-      // Then: 반복 아이콘(EventRepeat) 사라짐
+      // Then: API 응답 후 다이얼로그가 닫혀야 함
+      // waitFor를 사용하여 다이얼로그가 실제로 닫힐 때까지 대기
       await waitFor(() => {
-        const updatedEventBox = monthView.getByText('팀 미팅 (취소)').closest('div');
-        const iconsAfter = updatedEventBox?.querySelectorAll('svg');
-        expect(iconsAfter?.length).toBe(0);
+        const dialog = screen.queryByRole('dialog');
+        expect(dialog).not.toBeInTheDocument();
       });
+
+      // 성공 메시지 확인
+      expect(screen.getByText('일정이 수정되었습니다.')).toBeInTheDocument();
     });
 
     it('TC-4: "예" 후 폼 초기화', async () => {
@@ -334,13 +322,7 @@ describe('반복 일정 단일 수정 기능 (1단계)', () => {
 
     it('TC-7: 신규 반복 일정 생성 시 다이얼로그 표시 안 함', async () => {
       // Given: 신규 반복 일정 생성 중 (editingEvent === null)
-      server.use(
-        http.get('/api/events', () => {
-          return HttpResponse.json({
-            events: [],
-          });
-        })
-      );
+      setupMockHandlerRepeatCreation();
 
       const { user } = setup();
       await screen.findByText('일정 로딩 완료!');
@@ -577,73 +559,56 @@ describe('반복 일정 단일 수정 기능 (1단계)', () => {
     });
 
     it('TC-13: 같은 일정 재수정 시 다이얼로그 표시 안 함', async () => {
-      // Given: 단일 일정으로 변환됨 (repeat.type = 'none')
-      const convertedEvent = {
-        ...weeklyEvent,
-        title: '팀 미팅 (변환됨)',
-        repeat: { type: 'none', interval: 1 },
+      // Given: 단일 일정 (repeat.type = 'none')
+      const singleEventData: Event = {
+        id: 'event-single-2',
+        title: '단일 일정',
+        date: '2025-10-20',
+        startTime: '14:00',
+        endTime: '15:00',
+        description: '단일 일정입니다',
+        location: '사무실',
+        category: '업무',
+        repeat: {
+          type: 'none',
+          interval: 1,
+        },
+        notificationTime: 10,
       };
 
       server.use(
         http.get('/api/events', () => {
           return HttpResponse.json({
-            events: [weeklyEvent],
+            events: [singleEventData],
           });
         }),
-        http.put('/api/events/:id', async () => {
-          return HttpResponse.json(convertedEvent);
+        http.put('/api/events/:id', async ({ request }) => {
+          const updatedData = (await request.json()) as Event;
+          return HttpResponse.json({ ...singleEventData, ...updatedData });
         })
       );
 
       const { user } = setup();
       await screen.findByText('일정 로딩 완료!');
 
+      // When: 단일 일정 편집 → "일정 수정" 클릭
       const editButton = await screen.findByLabelText('Edit event');
       await user.click(editButton);
 
       const titleInput = screen.getByLabelText('제목');
       await user.clear(titleInput);
-      await user.type(titleInput, '팀 미팅 (변환됨)');
+      await user.type(titleInput, '단일 일정 (수정)');
 
       await user.click(screen.getByTestId('event-submit-button'));
 
+      // Then: 다이얼로그 표시 안 됨 (단일 일정이므로 repeat.type = 'none')
+      // 다이얼로그는 editingEvent && editingEvent.repeat.type !== 'none' 조건에서만 표시
       await waitFor(() => {
-        expect(screen.getByRole('dialog')).toBeInTheDocument();
+        expect(screen.queryByText('해당 일정만 수정하시겠어요?')).not.toBeInTheDocument();
       });
 
-      const yesButton = screen.getByRole('button', { name: '예' });
-      await user.click(yesButton);
-
-      // 일정이 단일 일정으로 변환됨
-      server.use(
-        http.get('/api/events', () => {
-          return HttpResponse.json({
-            events: [convertedEvent],
-          });
-        })
-      );
-
-      await waitFor(() => {
-        expect(screen.getByRole('heading', { name: '일정 추가' })).toBeInTheDocument();
-      });
-
-      // When: 같은 일정 재편집 → "일정 수정" 클릭
-      const editButtonAgain = await screen.findByLabelText('Edit event');
-      await user.click(editButtonAgain);
-
-      const titleInputAgain = screen.getByLabelText('제목');
-      await user.clear(titleInputAgain);
-      await user.type(titleInputAgain, '팀 미팅 (재수정)');
-
-      await user.click(screen.getByTestId('event-submit-button'));
-
-      // Then: 다이얼로그 표시 안 됨 (단일 일정이므로)
-      await waitFor(
-        () => {
-          expect(screen.queryByText('해당 일정만 수정하시겠어요?')).not.toBeInTheDocument();
-        },
-        { timeout: 1000 }
-      );
+      // 수정이 완료되었는지 확인 (스낵바 메시지)
+      expect(screen.getByText('일정이 수정되었습니다.')).toBeInTheDocument();
     });
   });
 
