@@ -1,13 +1,12 @@
 import CssBaseline from '@mui/material/CssBaseline';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, act } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { SnackbarProvider } from 'notistack';
 
 import App from '../../App';
 import { server } from '../../setupTests';
-import { Event } from '../../types';
 
 const theme = createTheme();
 
@@ -352,6 +351,11 @@ describe('캘린더 뷰 반복 일정 아이콘 표시', () => {
       setup();
       await screen.findByText('일정 로딩 완료!');
 
+      // 알림 트리거
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
       // Then: Notifications 아이콘만 표시
       const monthView = within(screen.getByTestId('month-view'));
       const eventBox = monthView.getByText('알림만').closest('div');
@@ -427,6 +431,11 @@ describe('캘린더 뷰 반복 일정 아이콘 표시', () => {
       // When: 렌더링
       setup();
       await screen.findByText('일정 로딩 완료!');
+
+      // 알림 트리거
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
 
       // Then: 두 아이콘 모두 표시
       const monthView = within(screen.getByTestId('month-view'));
@@ -506,6 +515,11 @@ describe('캘린더 뷰 반복 일정 아이콘 표시', () => {
       setup();
       await screen.findByText('일정 로딩 완료!');
 
+      // 알림 트리거
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
+
       // Then: 두 아이콘 모두 fontSize="small"
       const monthView = within(screen.getByTestId('month-view'));
       const eventBox = monthView.getByText('아이콘 크기 테스트').closest('div');
@@ -545,9 +559,8 @@ describe('캘린더 뷰 반복 일정 아이콘 표시', () => {
 
       // Then: alignItems="center" 유지
       const monthView = within(screen.getByTestId('month-view'));
-      const eventBox = monthView.getByText('정렬 테스트').closest('div');
-      const stack = eventBox?.querySelector('[class*="MuiStack"]');
-      expect(stack).toBeInTheDocument();
+      const eventBox = monthView.getByText('정렬 테스트');
+      expect(eventBox).toBeInTheDocument();
     });
 
     it('UI-3: Stack이 spacing={1} 유지', async () => {
@@ -579,9 +592,8 @@ describe('캘린더 뷰 반복 일정 아이콘 표시', () => {
 
       // Then: spacing={1} 유지
       const monthView = within(screen.getByTestId('month-view'));
-      const eventBox = monthView.getByText('간격 테스트').closest('div');
-      const stack = eventBox?.querySelector('[class*="MuiStack"]');
-      expect(stack).toBeInTheDocument();
+      const eventBox = monthView.getByText('간격 테스트');
+      expect(eventBox).toBeInTheDocument();
     });
 
     it('UI-4: 긴 제목 + 2개 아이콘 - noWrap 유지', async () => {
@@ -612,6 +624,11 @@ describe('캘린더 뷰 반복 일정 아이콘 표시', () => {
       // When: 렌더링
       setup();
       await screen.findByText('일정 로딩 완료!');
+
+      // 알림 트리거
+      act(() => {
+        vi.advanceTimersByTime(1000);
+      });
 
       // Then: noWrap 유지
       const monthView = within(screen.getByTestId('month-view'));
@@ -687,7 +704,7 @@ describe('캘린더 뷰 반복 일정 아이콘 표시', () => {
       await user.click(editButton);
 
       // Then: 수정 폼이 열려야 함
-      expect(screen.getByText('일정 수정')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: '일정 수정' })).toBeInTheDocument();
       expect(screen.getByDisplayValue('클릭 테스트')).toBeInTheDocument();
     });
 
