@@ -2,6 +2,11 @@ import { useSnackbar } from 'notistack';
 import { useEffect, useState } from 'react';
 
 import { Event, EventForm } from '../types';
+import {
+  generateRepeatDates,
+  getDefaultEndDate,
+  validateRepeatEndDate,
+} from '../utils/repeatEventUtils';
 
 export const useEventOperations = (editing: boolean, onSave?: () => void) => {
   const [events, setEvents] = useState<Event[]>([]);
@@ -31,11 +36,55 @@ export const useEventOperations = (editing: boolean, onSave?: () => void) => {
           body: JSON.stringify(eventData),
         });
       } else {
-        response = await fetch('/api/events', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(eventData),
-        });
+        // 새 일정 추가
+        if (eventData.repeat.type !== 'none') {
+          // 반복 일정인 경우
+          
+          // 1. 종료일 검증
+          if (eventData.repeat.endDate) {
+            const error = validateRepeatEndDate(eventData.date, eventData.repeat.endDate);
+            if (error) {
+              enqueueSnackbar(error, { variant: 'error' });
+              return;
+            }
+          }
+
+          // 2. 기본 종료일 설정
+          const endDate = eventData.repeat.endDate || getDefaultEndDate(eventData.date);
+
+          // 3. 반복 날짜 생성
+          const dates = generateRepeatDates({
+            ...eventData,
+            repeat: {
+              ...eventData.repeat,
+              endDate,
+            },
+          });
+
+          // 4. 각 날짜에 대한 Event 객체 배열 생성
+          const events = dates.map((date) => ({
+            ...eventData,
+            date,
+            repeat: {
+              ...eventData.repeat,
+              endDate,
+            },
+          }));
+
+          // 5. /api/events-list 호출 (여러 일정 한 번에 생성)
+          response = await fetch('/api/events-list', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ events }),
+          });
+        } else {
+          // 단일 일정인 경우 (기존 로직)
+          response = await fetch('/api/events', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(eventData),
+          });
+        }
       }
 
       if (!response.ok) {
