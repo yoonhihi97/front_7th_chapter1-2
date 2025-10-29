@@ -3,6 +3,7 @@ import ChevronRight from '@mui/icons-material/ChevronRight';
 import Close from '@mui/icons-material/Close';
 import Delete from '@mui/icons-material/Delete';
 import Edit from '@mui/icons-material/Edit';
+import EventRepeat from '@mui/icons-material/EventRepeat';
 import Notifications from '@mui/icons-material/Notifications';
 import {
   Alert,
@@ -205,6 +206,7 @@ function App() {
                           >
                             <Stack direction="row" spacing={1} alignItems="center">
                               {isNotified && <Notifications fontSize="small" />}
+                              {event.repeat.type !== 'none' && <EventRepeat fontSize="small" />}
                               <Typography
                                 variant="caption"
                                 noWrap
@@ -292,6 +294,7 @@ function App() {
                                 >
                                   <Stack direction="row" spacing={1} alignItems="center">
                                     {isNotified && <Notifications fontSize="small" />}
+                                    {event.repeat.type !== 'none' && <EventRepeat fontSize="small" />}
                                     <Typography
                                       variant="caption"
                                       noWrap
