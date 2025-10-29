@@ -294,7 +294,9 @@ function App() {
                                 >
                                   <Stack direction="row" spacing={1} alignItems="center">
                                     {isNotified && <Notifications fontSize="small" />}
-                                    {event.repeat.type !== 'none' && <EventRepeat fontSize="small" />}
+                                    {event.repeat.type !== 'none' && (
+                                      <EventRepeat fontSize="small" />
+                                    )}
                                     <Typography
                                       variant="caption"
                                       noWrap

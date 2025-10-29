@@ -39,7 +39,7 @@ export const useEventOperations = (editing: boolean, onSave?: () => void) => {
         // 새 일정 추가
         if (eventData.repeat.type !== 'none') {
           // 반복 일정인 경우
-          
+
           // 1. 종료일 검증
           if (eventData.repeat.endDate) {
             const error = validateRepeatEndDate(eventData.date, eventData.repeat.endDate);

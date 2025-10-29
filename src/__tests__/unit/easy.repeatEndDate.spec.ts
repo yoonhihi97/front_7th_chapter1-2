@@ -113,13 +113,7 @@ describe('generateRepeatDates - 종료일 적용', () => {
     const result = generateRepeatDates(eventForm);
 
     // Then: 5개 날짜 생성
-    expect(result).toEqual([
-      '2025-11-01',
-      '2025-11-02',
-      '2025-11-03',
-      '2025-11-04',
-      '2025-11-05',
-    ]);
+    expect(result).toEqual(['2025-11-01', '2025-11-02', '2025-11-03', '2025-11-04', '2025-11-05']);
   });
 
   it('GRD-2: 종료일까지만 생성 (매주)', () => {
@@ -144,13 +138,7 @@ describe('generateRepeatDates - 종료일 적용', () => {
     const result = generateRepeatDates(eventForm);
 
     // Then: 5개 날짜 생성 (매주 토요일)
-    expect(result).toEqual([
-      '2025-11-01',
-      '2025-11-08',
-      '2025-11-15',
-      '2025-11-22',
-      '2025-11-29',
-    ]);
+    expect(result).toEqual(['2025-11-01', '2025-11-08', '2025-11-15', '2025-11-22', '2025-11-29']);
   });
 
   it('GRD-3: 종료일 = 시작일 → 1개만 생성', () => {
@@ -311,4 +299,3 @@ describe('generateRepeatDates - 종료일 적용', () => {
     expect(result).toEqual(['2025-01-31', '2025-03-31', '2025-05-31']);
   });
 });
-

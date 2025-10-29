@@ -34,9 +34,7 @@ export function getDefaultEndDate(startDate: string): string {
   const maxDate = new Date('2025-12-31');
 
   // 1년 후가 최대 날짜보다 크면 최대 날짜 반환
-  return oneYearLater > maxDate
-    ? '2025-12-31'
-    : oneYearLater.toISOString().split('T')[0];
+  return oneYearLater > maxDate ? '2025-12-31' : oneYearLater.toISOString().split('T')[0];
 }
 
 /**
@@ -139,4 +137,3 @@ export function generateRepeatDates(baseEvent: EventForm): string[] {
 
   return dates;
 }
-
