@@ -12,6 +12,10 @@ import { Event } from '../../types';
 
 const theme = createTheme();
 
+/**
+ * 테스트 환경을 설정하고 App 컴포넌트를 렌더링합니다.
+ * @returns render 결과와 userEvent 인스턴스
+ */
 const setup = () => {
   const user = userEvent.setup();
 
@@ -29,7 +33,10 @@ const setup = () => {
 };
 
 describe('반복 일정 단일 수정 기능 (1단계)', () => {
-  // Mock 데이터
+  /**
+   * 테스트용 반복 일정 Mock 데이터
+   * repeat.type = 'weekly'인 반복 일정
+   */
   const weeklyEvent: Event = {
     id: 'event-weekly-1',
     title: '팀 미팅',
@@ -47,6 +54,10 @@ describe('반복 일정 단일 수정 기능 (1단계)', () => {
     notificationTime: 10,
   };
 
+  /**
+   * 테스트용 단일 일정 Mock 데이터
+   * repeat.type = 'none'인 단일 일정
+   */
   const singleEvent: Event = {
     id: 'event-single-1',
     title: '일일 일정',
@@ -61,6 +72,26 @@ describe('반복 일정 단일 수정 기능 (1단계)', () => {
       interval: 1,
     },
     notificationTime: 10,
+  };
+
+  /**
+   * 일정 편집 후 다이얼로그 표시까지의 공통 로직
+   * @param user - userEvent 인스턴스
+   * @param newTitle - 수정할 제목
+   */
+  const editEventAndOpenDialog = async (user: ReturnType<typeof userEvent.setup>, newTitle: string) => {
+    const editButton = await screen.findByLabelText('Edit event');
+    await user.click(editButton);
+
+    const titleInput = screen.getByLabelText('제목');
+    await user.clear(titleInput);
+    await user.type(titleInput, newTitle);
+
+    await user.click(screen.getByTestId('event-submit-button'));
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog')).toBeInTheDocument();
+    });
   };
 
   describe('Happy Path (정상 시나리오)', () => {
@@ -365,18 +396,8 @@ describe('반복 일정 단일 수정 기능 (1단계)', () => {
       const { user } = setup();
       await screen.findByText('일정 로딩 완료!');
 
-      const editButton = await screen.findByLabelText('Edit event');
-      await user.click(editButton);
-
-      const titleInput = screen.getByLabelText('제목');
-      await user.clear(titleInput);
-      await user.type(titleInput, '팀 미팅 (수정)');
-
-      await user.click(screen.getByTestId('event-submit-button'));
-
-      await waitFor(() => {
-        expect(screen.getByRole('dialog')).toBeInTheDocument();
-      });
+      // 일정 편집 및 다이얼로그 표시
+      await editEventAndOpenDialog(user, '팀 미팅 (수정)');
 
       // When: "아니오" 버튼 클릭
       const noButton = screen.getByRole('button', { name: '아니오' });
@@ -481,18 +502,8 @@ describe('반복 일정 단일 수정 기능 (1단계)', () => {
       const { user } = setup();
       await screen.findByText('일정 로딩 완료!');
 
-      const editButton = await screen.findByLabelText('Edit event');
-      await user.click(editButton);
-
-      const titleInput = screen.getByLabelText('제목');
-      await user.clear(titleInput);
-      await user.type(titleInput, '팀 미팅 (수정)');
-
-      await user.click(screen.getByTestId('event-submit-button'));
-
-      await waitFor(() => {
-        expect(screen.getByRole('dialog')).toBeInTheDocument();
-      });
+      // 일정 편집 및 다이얼로그 표시
+      await editEventAndOpenDialog(user, '팀 미팅 (수정)');
 
       // When: 다이얼로그 배경 클릭 (Escape 키로 대체)
       await user.keyboard('{Escape}');

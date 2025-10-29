@@ -34,7 +34,7 @@ import {
   Typography,
 } from '@mui/material';
 import { useSnackbar } from 'notistack';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useCalendarView } from './hooks/useCalendarView.ts';
 import { useEventForm } from './hooks/useEventForm.ts';
@@ -99,9 +99,10 @@ function App() {
     editEvent,
   } = useEventForm();
 
-  const { events, saveEvent, deleteEvent } = useEventOperations(Boolean(editingEvent), () =>
-    setEditingEvent(null)
-  );
+  const { events, saveEvent, deleteEvent } = useEventOperations(Boolean(editingEvent), () => {
+    setEditingEvent(null);
+    resetForm();
+  });
 
   const { notifications, notifiedEvents, setNotifications } = useNotifications(events);
   const { view, setView, currentDate, holidays, navigate } = useCalendarView();
@@ -109,17 +110,70 @@ function App() {
 
   const [isOverlapDialogOpen, setIsOverlapDialogOpen] = useState(false);
   const [overlappingEvents, setOverlappingEvents] = useState<Event[]>([]);
+  const [isEditRepeatDialogOpen, setIsEditRepeatDialogOpen] = useState(false);
 
   const { enqueueSnackbar } = useSnackbar();
 
+  /**
+   * editingEvent가 변경되면 반복 일정 수정 다이얼로그를 닫습니다.
+   * 사용자가 다른 일정을 선택했을 때 이전 다이얼로그가 남아있지 않도록 합니다.
+   */
+  useEffect(() => {
+    if (editingEvent) {
+      setIsEditRepeatDialogOpen(false);
+    }
+  }, [editingEvent]);
+
+  /**
+   * 반복 일정의 단일 인스턴스를 수정합니다.
+   * 반복 일정을 단일 일정으로 변환하여 저장합니다 (repeat.type = 'none').
+   */
+  const handleEditSingleEvent = async () => {
+    setIsEditRepeatDialogOpen(false);
+
+    if (!editingEvent) return;
+
+    // 반복 일정을 단일 일정으로 변환 (repeat.type = 'none')
+    const singleEventData: Event = {
+      id: editingEvent.id,
+      title,
+      date,
+      startTime,
+      endTime,
+      description,
+      location,
+      category,
+      repeat: {
+        type: 'none',
+        interval: 1,
+      },
+      notificationTime,
+    };
+
+    await saveEvent(singleEventData);
+  };
+
+  /**
+   * 일정을 추가하거나 수정합니다.
+   * 반복 일정 수정 시 다이얼로그를 표시하고, 일반 일정은 겹침 체크 후 저장합니다.
+   */
   const addOrUpdateEvent = async () => {
+    // 필수 필드 검증
     if (!title || !date || !startTime || !endTime) {
       enqueueSnackbar('필수 정보를 모두 입력해주세요.', { variant: 'error' });
       return;
     }
 
+    // 시간 유효성 검증
     if (startTimeError || endTimeError) {
       enqueueSnackbar('시간 설정을 확인해주세요.', { variant: 'error' });
+      return;
+    }
+
+    // 반복 일정 수정 시 다이얼로그 표시 (단일 수정 vs 전체 수정 선택)
+    const isEditingRepeatEvent = editingEvent && editingEvent.repeat.type !== 'none';
+    if (isEditingRepeatEvent) {
+      setIsEditRepeatDialogOpen(true);
       return;
     }
 
@@ -140,13 +194,13 @@ function App() {
       notificationTime,
     };
 
+    // 일정 겹침 검사
     const overlapping = findOverlappingEvents(eventData, events);
     if (overlapping.length > 0) {
       setOverlappingEvents(overlapping);
       setIsOverlapDialogOpen(true);
     } else {
       await saveEvent(eventData);
-      resetForm();
     }
   };
 
@@ -642,6 +696,20 @@ function App() {
           >
             계속 진행
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 반복 일정 단일 수정 다이얼로그 */}
+      <Dialog open={isEditRepeatDialogOpen} onClose={() => setIsEditRepeatDialogOpen(false)}>
+        <DialogTitle>반복 일정 수정</DialogTitle>
+        <DialogContent>
+          <DialogContentText>해당 일정만 수정하시겠어요?</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleEditSingleEvent} variant="contained">
+            예
+          </Button>
+          <Button onClick={() => setIsEditRepeatDialogOpen(false)}>아니오</Button>
         </DialogActions>
       </Dialog>
 
