@@ -163,7 +163,7 @@ function App() {
   const handleEditAllEvents = async () => {
     setIsEditRepeatDialogOpen(false);
 
-    if (!editingEvent || !(editingEvent.repeat as any).id) return;
+    if (!editingEvent || !editingEvent.repeat.id) return;
 
     // 전체 수정용 데이터 (date, repeat 제외)
     const updateData = {
@@ -176,7 +176,7 @@ function App() {
       notificationTime,
     };
 
-    await updateRecurringEvents((editingEvent.repeat as any).id, updateData);
+    await updateRecurringEvents(editingEvent.repeat.id, updateData);
   };
 
   /**

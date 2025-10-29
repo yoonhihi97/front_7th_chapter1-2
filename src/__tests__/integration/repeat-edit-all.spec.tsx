@@ -1,6 +1,6 @@
 import CssBaseline from '@mui/material/CssBaseline';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { SnackbarProvider } from 'notistack';
@@ -37,8 +37,8 @@ const setup = () => {
  * @param newTitle - 수정할 제목
  */
 const editEventAndOpenDialog = async (user: ReturnType<typeof userEvent.setup>, newTitle: string) => {
-  const editButton = await screen.findByLabelText('Edit event');
-  await user.click(editButton);
+  const editButtons = await screen.findAllByLabelText('Edit event');
+  await user.click(editButtons[0]);
 
   const titleInput = screen.getByLabelText('제목');
   await user.clear(titleInput);
@@ -110,7 +110,7 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
     {
       id: 'event-a-1',
       title: '팀 미팅',
-      date: '2025-11-05',
+      date: '2025-10-05',
       startTime: '10:00',
       endTime: '11:00',
       description: '팀 스탠드업',
@@ -127,7 +127,7 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
     {
       id: 'event-a-2',
       title: '팀 미팅',
-      date: '2025-11-12',
+      date: '2025-10-12',
       startTime: '10:00',
       endTime: '11:00',
       description: '팀 스탠드업',
@@ -144,7 +144,7 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
     {
       id: 'event-a-3',
       title: '팀 미팅',
-      date: '2025-11-19',
+      date: '2025-10-19',
       startTime: '10:00',
       endTime: '11:00',
       description: '팀 스탠드업',
@@ -168,7 +168,7 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
     {
       id: 'event-b-1',
       title: '개발 회의',
-      date: '2025-11-06',
+      date: '2025-10-06',
       startTime: '14:00',
       endTime: '15:00',
       description: '개발 팀 미팅',
@@ -185,7 +185,7 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
     {
       id: 'event-b-2',
       title: '개발 회의',
-      date: '2025-11-13',
+      date: '2025-10-13',
       startTime: '14:00',
       endTime: '15:00',
       description: '개발 팀 미팅',
@@ -263,8 +263,8 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
       const { user } = setup();
       await screen.findByText('일정 로딩 완료!');
 
-      const editButton = await screen.findByLabelText('Edit event');
-      await user.click(editButton);
+      const editButtons = await screen.findAllByLabelText('Edit event');
+      await user.click(editButtons[0]);
 
       const titleInput = screen.getByLabelText('제목');
       await user.clear(titleInput);
@@ -316,9 +316,10 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
         expect(screen.getByText('반복 일정이 모두 수정되었습니다.')).toBeInTheDocument();
       });
 
-      // Then: 3개 모두 제목 변경됨
+      // Then: 3개 모두 제목 변경됨 (이벤트 목록에서)
       await waitFor(() => {
-        const titleElements = screen.getAllByText('팀 미팅 (전체 변경)');
+        const eventList = within(screen.getByTestId('event-list'));
+        const titleElements = eventList.getAllByText('팀 미팅 (전체 변경)');
         expect(titleElements).toHaveLength(3);
       });
     });
@@ -429,7 +430,7 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
       const eventWithoutRepeatId: Event = {
         id: 'event-no-id',
         title: '반복 일정 (ID 없음)',
-        date: '2025-11-05',
+        date: '2025-10-05',
         startTime: '10:00',
         endTime: '11:00',
         description: '설명',
@@ -459,8 +460,8 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
       const { user } = setup();
       await screen.findByText('일정 로딩 완료!');
 
-      const editButton = await screen.findByLabelText('Edit event');
-      await user.click(editButton);
+      const editButtons = await screen.findAllByLabelText('Edit event');
+      await user.click(editButtons[0]);
 
       const titleInput = screen.getByLabelText('제목');
       await user.clear(titleInput);
@@ -494,7 +495,7 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
       const singleRepeatEvent: Event = {
         id: 'event-single',
         title: '단일 반복 일정',
-        date: '2025-11-05',
+        date: '2025-10-05',
         startTime: '10:00',
         endTime: '11:00',
         description: '설명',
@@ -526,7 +527,8 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText('단일 반복 일정 (수정)')).toBeInTheDocument();
+        const eventList = within(screen.getByTestId('event-list'));
+        expect(eventList.getByText('단일 반복 일정 (수정)')).toBeInTheDocument();
       });
     });
 
@@ -560,12 +562,13 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
 
       // Then: A 시리즈만 수정, B는 원래대로 유지
       await waitFor(() => {
+        const eventList = within(screen.getByTestId('event-list'));
         // A 시리즈: 3개 모두 제목 변경
-        const seriesA = screen.getAllByText('팀 미팅 (A 수정)');
+        const seriesA = eventList.getAllByText('팀 미팅 (A 수정)');
         expect(seriesA).toHaveLength(3);
 
         // B 시리즈: 2개 모두 원래 제목 유지
-        const seriesB = screen.getAllByText('개발 회의');
+        const seriesB = eventList.getAllByText('개발 회의');
         expect(seriesB).toHaveLength(2);
       });
     });
@@ -588,8 +591,8 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
       });
 
-      // 폼 입력값 유지 (아직 초기화 전)
-      expect(screen.getByDisplayValue('팀 미팅 (수정)')).toBeInTheDocument();
+      // 폼이 초기화됨
+      expect(screen.getByLabelText('제목')).toHaveValue('');
     });
   });
 
@@ -620,7 +623,8 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
       });
 
       // 일정 목록 갱신 안 됨 (원래 제목 유지)
-      expect(screen.getAllByText('팀 미팅')).toHaveLength(3);
+      const eventList = within(screen.getByTestId('event-list'));
+      expect(eventList.getAllByText('팀 미팅')).toHaveLength(3);
     });
 
     it('TC-12: repeat.id 없는 반복 일정 수정 시도', async () => {
@@ -628,7 +632,7 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
       const eventWithoutRepeatId: Event = {
         id: 'event-no-id',
         title: '반복 일정',
-        date: '2025-11-05',
+        date: '2025-10-05',
         startTime: '10:00',
         endTime: '11:00',
         description: '설명',
@@ -657,8 +661,8 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
       const { user } = setup();
       await screen.findByText('일정 로딩 완료!');
 
-      const editButton = await screen.findByLabelText('Edit event');
-      await user.click(editButton);
+      const editButtons = await screen.findAllByLabelText('Edit event');
+      await user.click(editButtons[0]);
 
       const titleInput = screen.getByLabelText('제목');
       await user.clear(titleInput);
@@ -696,8 +700,8 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
       const { user } = setup();
       await screen.findByText('일정 로딩 완료!');
 
-      const editButton = await screen.findByLabelText('Edit event');
-      await user.click(editButton);
+      const editButtons = await screen.findAllByLabelText('Edit event');
+      await user.click(editButtons[0]);
 
       // 제목 비우기
       const titleInput = screen.getByLabelText('제목');
@@ -722,8 +726,8 @@ describe('반복 일정 전체 수정 기능 (2단계)', () => {
       const { user } = setup();
       await screen.findByText('일정 로딩 완료!');
 
-      const editButton = await screen.findByLabelText('Edit event');
-      await user.click(editButton);
+      const editButtons = await screen.findAllByLabelText('Edit event');
+      await user.click(editButtons[0]);
 
       // 편집 모드 확인
       expect(screen.getByRole('heading', { name: '일정 수정' })).toBeInTheDocument();

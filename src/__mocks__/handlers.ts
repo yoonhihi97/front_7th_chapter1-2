@@ -43,7 +43,7 @@ export const handlers = [
 
     // 같은 repeatId를 가진 모든 일정 찾기 및 수정
     const updatedEvents = events.map((event) => {
-      if ((event.repeat as any)?.id === repeatId) {
+      if (event.repeat?.id === repeatId) {
         return {
           ...event,
           title: updateData.title !== undefined ? updateData.title : event.title,
@@ -64,7 +64,7 @@ export const handlers = [
     events.length = 0;
     events.push(...updatedEvents);
 
-    const updatedSeries = updatedEvents.filter((e) => (e.repeat as any)?.id === repeatId);
+    const updatedSeries = updatedEvents.filter((e) => e.repeat?.id === repeatId);
 
     if (updatedSeries.length === 0) {
       return new HttpResponse(null, { status: 404 });
