@@ -1,304 +1,229 @@
-# 테스트 설계 문서: 반복 일정 선택 기능
+# 테스트 설계 문서: 반복 유형 선택 기능 (Phase 1)
 
 **파일 위치**: `.claude/test-designs/test-repeat-event.md`
-**대상 기능**: 반복 일정 자동 생성 (generateRepeatDates, validateRepeatEndDate)
+**대상 기능**: 반복 유형 선택 UI 및 상태 관리
 **작성일**: 2025-10-29
+**버전**: 1.1 (Phase 1 - 반복 유형 선택만 집중)
 
 ---
 
 ## 1. 분석 결과
 
-### 1.1 기존 코드 구조
+### 1.1 Phase 1 목표
+**반복 유형 선택 기능만 구현**
+- 반복 여부 선택 (체크박스) ← 이미 활성화됨
+- 반복 유형 선택 (드롭다운): daily, weekly, monthly, yearly
+- 반복 간격 입력 (숫자): 1 이상
+- 반복 종료일 선택 (선택사항): 날짜 입력
 
-#### 타입 정의 (src/types.ts)
-```typescript
-export type RepeatType = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+### 1.2 구현 범위
 
-export interface RepeatInfo {
-  type: RepeatType;
-  interval: number;
-  endDate?: string;
-}
+**구현할 것**:
+1. **App.tsx 주석 해제**
+   - 라인 85-89: `setRepeatType`, `setRepeatInterval`, `setRepeatEndDate` setter 활성화
+   - 라인 446-483: 반복 UI 컴포넌트 주석 해제
+   - 라인 43-44: import 수정 (RepeatType 추가)
 
-export interface EventForm {
-  title: string;
-  date: string;  // YYYY-MM-DD
-  startTime: string;  // HH:mm
-  endTime: string;
-  description: string;
-  location: string;
-  category: string;
-  repeat: RepeatInfo;
-  notificationTime: number;
-}
-```
+2. **UI 동작**
+   - 반복 체크박스 ON → 반복 옵션 표시
+   - 드롭다운에서 유형 선택 가능
+   - 숫자 입력에서 간격 입력 가능 (min=1)
+   - 선택사항: 종료일 입력
 
-### 1.2 구현할 기능
+3. **상태 관리**
+   - `useEventForm` 훅에서 상태 유지
+   - `repeatType`, `repeatInterval`, `repeatEndDate` 값 저장
+   - RepeatInfo 객체 생성
 
-**미구현 함수**:
-1. `generateRepeatDates(event: EventForm): string[]`
-   - 반복 날짜 배열 생성
-
-2. `validateRepeatEndDate(startDate: string, endDate: string): string | null`
-   - 종료일 검증
+### 1.3 제외되는 기능 (Phase 2~5에서 구현)
+- 반복 날짜 배열 생성 (Phase 2)
+- 반복 일정 서버 저장 (Phase 2)
+- 반복 일정 표시 (Phase 2)
+- 반복 일정 수정 (Phase 4)
+- 반복 일정 삭제 (Phase 5)
 
 ---
 
 ## 2. 테스트 전략
 
-### 2.1 충족성 기준
+### 2.1 테스트 범위
 
-**테스트 분류**:
-- Happy Path: 정상 동작 (8개)
-- Boundary Cases: 경계 조건 (8개)
-- Special Cases: 특수 날짜 (6개)
-- Error Cases: 오류 처리 (3개)
-- **총 25개 테스트 케이스**
+**테스트 대상**:
+- UI 컴포넌트 렌더링 (조건부 표시)
+- 입력 값 상태 관리
+- 드롭다운 값 선택
+- 숫자 입력 검증 (min=1)
+- 종료일 선택 (선택사항)
+
+**테스트하지 않는 것**:
+- 날짜 계산 로직 (Phase 2)
+- API 호출 (Phase 2)
+- 반복 일정 저장 (Phase 2)
+
+### 2.2 테스트 케이스
+
+**총 13개 테스트 케이스**:
+- UI 렌더링: 4개
+- 반복 유형 선택: 4개
+- 반복 간격 입력: 3개
+- 반복 종료일 선택: 2개
 
 ---
 
-## 3. 테스트 시나리오
+## 3. 상세 테스트 시나리오
 
-### 3.1 Happy Path - 정상 동작
+### 3.1 UI 렌더링 (4개)
 
-#### HP-1: 매일 반복 (간격 1)
+#### RT-1: 반복 체크박스 OFF 시 반복 옵션 숨김
 ```
-Given: 2025-10-29 시작, daily, 간격 1, 종료일 2025-11-02
-When: generateRepeatDates 호출
-Then: 5개 날짜 반환 (10/29, 10/30, 10/31, 11/01, 11/02)
-```
-
-#### HP-2: 매일 반복 (간격 2)
-```
-Given: 2025-10-29 시작, daily, 간격 2, 종료일 2025-11-04
-When: generateRepeatDates 호출
-Then: 4개 날짜 반환 (10/29, 10/31, 11/02, 11/04)
+Given: 반복 체크박스가 선택되지 않음 (isRepeating = false)
+When: 컴포넌트 렌더링
+Then: 반복 유형, 간격, 종료일 입력 필드가 숨겨짐
 ```
 
-#### HP-3: 매주 반복 (간격 1)
+#### RT-2: 반복 체크박스 ON 시 반복 옵션 표시
 ```
-Given: 2025-10-29(수) 시작, weekly, 간격 1, 종료일 2025-11-19
-When: generateRepeatDates 호출
-Then: 4개 날짜 반환 (10/29, 11/05, 11/12, 11/19) - 모두 수요일
-```
-
-#### HP-4: 매주 반복 (간격 2)
-```
-Given: 2025-10-29 시작, weekly, 간격 2, 종료일 2025-11-26
-When: generateRepeatDates 호출
-Then: 3개 날짜 반환 (10/29, 11/12, 11/26)
+Given: 반복 체크박스가 선택됨 (isRepeating = true)
+When: 컴포넌트 렌더링
+Then: 반복 유형 드롭다운, 간격 입력, 종료일 입력이 표시됨
 ```
 
-#### HP-5: 매월 반복 (간격 1)
+#### RT-3: 반복 유형 드롭다운에 4개 옵션 표시
 ```
-Given: 2025-10-15 시작, monthly, 간격 1, 종료일 2026-01-15
-When: generateRepeatDates 호출
-Then: 4개 날짜 반환 (10/15, 11/15, 12/15, 01/15) - 모두 15일
-```
-
-#### HP-6: 매월 반복 (간격 3)
-```
-Given: 2025-10-15 시작, monthly, 간격 3, 종료일 2026-04-15
-When: generateRepeatDates 호출
-Then: 3개 날짜 반환 (10/15, 01/15, 04/15)
+Given: 반복 체크박스 ON
+When: 반복 유형 드롭다운 열기
+Then: 4개 옵션 표시 (매일, 매주, 매월, 매년)
 ```
 
-#### HP-7: 매년 반복 (간격 1)
+#### RT-4: 반복 간격 입력에 min=1 제한
 ```
-Given: 2025-03-20 시작, yearly, 간격 1, 종료일 2028-03-20
-When: generateRepeatDates 호출
-Then: 4개 날짜 반환 (2025/03/20, 2026/03/20, 2027/03/20, 2028/03/20)
-```
-
-#### HP-8: 매년 반복 (간격 2)
-```
-Given: 2025-06-10 시작, yearly, 간격 2, 종료일 2029-06-10
-When: generateRepeatDates 호출
-Then: 3개 날짜 반환 (2025/06/10, 2027/06/10, 2029/06/10)
+Given: 반복 체크박스 ON
+When: 반복 간격 입력 필드 확인
+Then: HTML min="1" 속성 있음
 ```
 
-### 3.2 Boundary Cases - 경계 조건
+### 3.2 반복 유형 선택 (4개)
 
-#### BC-1: 종료일 미지정 - daily 최대 개수
+#### RS-1: 매일(daily) 선택 → 상태 업데이트
 ```
-Given: 2025-01-01 시작, daily, 간격 1, 종료일 없음
-When: generateRepeatDates 호출
-Then: 최대 100개 반환 OR 1년(2026-01-01) 이전까지
-```
-
-#### BC-2: 종료일 미지정 - yearly
-```
-Given: 2025-10-29 시작, yearly, 간격 1, 종료일 없음
-When: generateRepeatDates 호출
-Then: 1개 반환 (1년 이내 같은 날짜 없음)
+Given: 반복 체크박스 ON
+When: 드롭다운에서 "매일" 선택
+Then: repeatType = 'daily' 저장됨
 ```
 
-#### BC-3: 종료일 = 시작일
+#### RS-2: 매주(weekly) 선택 → 상태 업데이트
 ```
-Given: 2025-10-29 시작, daily, 간격 1, 종료일 2025-10-29
-When: generateRepeatDates 호출
-Then: 1개 반환 (시작일만)
-```
-
-#### BC-4: 매월 반복 - 월초 (1일)
-```
-Given: 2025-10-01 시작, monthly, 간격 1, 종료일 2025-12-01
-When: generateRepeatDates 호출
-Then: 3개 날짜 반환 (10/01, 11/01, 12/01)
+Given: 반복 체크박스 ON
+When: 드롭다운에서 "매주" 선택
+Then: repeatType = 'weekly' 저장됨
 ```
 
-#### BC-5: 매월 반복 - 월말 (31일)
+#### RS-3: 매월(monthly) 선택 → 상태 업데이트
 ```
-Given: 2025-10-31 시작, monthly, 간격 1, 종료일 2025-12-31
-When: generateRepeatDates 호출
-Then: 2개 날짜 반환 (10/31, 12/31) - 11월 31일 없음, 건너뜀
-```
-
-#### BC-6: 매월 반복 - 30일
-```
-Given: 2025-10-30 시작, monthly, 간격 1, 종료일 2026-03-30
-When: generateRepeatDates 호출
-Then: 5개 날짜 반환 (10/30, 11/30, 12/30, 01/30, 03/30) - 2월 건너뜀
+Given: 반복 체크박스 ON
+When: 드롭다운에서 "매월" 선택
+Then: repeatType = 'monthly' 저장됨
 ```
 
-#### BC-7: 매월 반복 - 29일 (윤년)
+#### RS-4: 매년(yearly) 선택 → 상태 업데이트
 ```
-Given: 2024-01-29 시작, monthly, 간격 1, 종료일 2024-04-29
-When: generateRepeatDates 호출
-Then: 4개 날짜 반환 (01/29, 02/29, 03/29, 04/29) - 2024년 윤년
-```
-
-#### BC-8: 최대 개수 제한 (100개)
-```
-Given: 2025-01-01 시작, daily, 간격 1, 종료일 2025-12-31 (365일)
-When: generateRepeatDates 호출
-Then: 정확히 100개 반환
+Given: 반복 체크박스 ON
+When: 드롭다운에서 "매년" 선택
+Then: repeatType = 'yearly' 저장됨
 ```
 
-### 3.3 Special Cases - 특수 날짜 처리
+### 3.3 반복 간격 입력 (3개)
 
-#### SC-1: 31일 + monthly → 2월 건너뛰기
+#### RI-1: 간격 1 입력
 ```
-Given: 2025-01-31 시작, monthly, 간격 1, 종료일 2025-03-31
-When: generateRepeatDates 호출
-Then: 2개 날짜 반환 (01/31, 03/31) - 2월 31일 없음
-```
-
-#### SC-2: 31일 + monthly → 30일 달 건너뛰기
-```
-Given: 2025-10-31 시작, monthly, 간격 1, 종료일 2025-12-31
-When: generateRepeatDates 호출
-Then: 2개 날짜 반환 (10/31, 12/31) - 11월 30일
+Given: 반복 체크박스 ON
+When: 간격 입력에 "1" 입력
+Then: repeatInterval = 1 저장됨
 ```
 
-#### SC-3: 29일 + monthly → 평년 2월 건너뛰기
+#### RI-2: 간격 2 입력
 ```
-Given: 2025-01-29 시작, monthly, 간격 1, 종료일 2025-03-29 (2025년은 평년)
-When: generateRepeatDates 호출
-Then: 2개 날짜 반환 (01/29, 03/29) - 평년 2월 28일
-```
-
-#### SC-4: 윤년 2월 29일 + yearly → 평년 건너뛰기
-```
-Given: 2024-02-29 시작, yearly, 간격 1, 종료일 2028-02-29
-When: generateRepeatDates 호출
-Then: 2개 날짜 반환 (2024/02/29, 2028/02/29) - 2025,2026,2027 건너뜀
+Given: 반복 체크박스 ON
+When: 간격 입력에 "2" 입력
+Then: repeatInterval = 2 저장됨
 ```
 
-#### SC-5: 윤년 2월 29일 + yearly - 간격 2
+#### RI-3: 간격 0 입력 불가 (UI 제한)
 ```
-Given: 2024-02-29 시작, yearly, 간격 2, 종료일 2032-02-29
-When: generateRepeatDates 호출
-Then: 3개 날짜 반환 (2024/02/29, 2028/02/29, 2032/02/29) - 2026, 2030 건너뜀
-```
-
-#### SC-6: 윤년 2월 29일 + yearly - 간격 4 (모두 윤년)
-```
-Given: 2024-02-29 시작, yearly, 간격 4, 종료일 2036-02-29
-When: generateRepeatDates 호출
-Then: 4개 날짜 반환 (2024/02/29, 2028/02/29, 2032/02/29, 2036/02/29)
+Given: 반복 체크박스 ON
+When: 간격 입력에 "0" 입력 시도
+Then: 입력 필드에서 min=1로 인해 제한됨
 ```
 
-### 3.4 Error Cases - 오류 처리
+### 3.4 반복 종료일 선택 (2개)
 
-#### EC-1: 반복 종료일 < 시작일
+#### RE-1: 종료일 미입력 (선택사항)
 ```
-Given: startDate='2025-10-29', endDate='2025-10-28'
-When: validateRepeatEndDate 호출
-Then: "반복 종료일은 시작일 이후여야 합니다" 반환
-```
-
-#### EC-2: 종료일 = 시작일 (유효함)
-```
-Given: startDate='2025-10-29', endDate='2025-10-29'
-When: validateRepeatEndDate 호출
-Then: null 반환 (에러 없음)
+Given: 반복 체크박스 ON
+When: 종료일 입력 필드 비워둠
+Then: repeatEndDate = '' (empty string) 저장됨
 ```
 
-#### EC-3: 종료일 > 시작일 (유효함)
+#### RE-2: 종료일 입력 예시
 ```
-Given: startDate='2025-10-29', endDate='2025-10-30'
-When: validateRepeatEndDate 호출
-Then: null 반환 (에러 없음)
+Given: 반복 체크박스 ON
+When: 종료일 입력에 "2025-12-31" 입력
+Then: repeatEndDate = '2025-12-31' 저장됨
 ```
 
 ---
 
-## 4. 테스트 데이터셋
+## 4. 테스트 케이스 요약
 
-### 4.1 테스트용 고정 날짜
-```typescript
-const FIXED_DATES = {
-  base: '2025-10-29',           // 기본 시작일 (수요일)
-  leap: '2024-02-29',           // 윤년 2월 29일
-  monthEnd31: '2025-10-31',     // 31일
-  monthEnd30: '2025-10-30',     // 30일
-  monthEnd29: '2024-01-29',     // 29일
-  monthStart: '2025-10-01',     // 월초
-};
-```
+| ID | 케이스 | 예상 결과 |
+|----|--------|---------|
+| RT-1 | 반복 체크박스 OFF | 반복 옵션 숨김 |
+| RT-2 | 반복 체크박스 ON | 반복 옵션 표시 |
+| RT-3 | 드롭다운 열기 | 4개 옵션 표시 |
+| RT-4 | 간격 입력 필드 | min=1 제한 있음 |
+| RS-1 | "매일" 선택 | repeatType='daily' |
+| RS-2 | "매주" 선택 | repeatType='weekly' |
+| RS-3 | "매월" 선택 | repeatType='monthly' |
+| RS-4 | "매년" 선택 | repeatType='yearly' |
+| RI-1 | 간격 "1" 입력 | repeatInterval=1 |
+| RI-2 | 간격 "2" 입력 | repeatInterval=2 |
+| RI-3 | 간격 "0" 입력 | 제한됨 (min=1) |
+| RE-1 | 종료일 비워둠 | repeatEndDate='' |
+| RE-2 | 종료일 입력 | repeatEndDate='2025-12-31' |
 
-### 4.2 헬퍼 함수
+---
+
+## 5. 테스트 파일 구조
+
 ```typescript
-const createEvent = (
-  date: string,
-  repeatType: RepeatType,
-  interval: number,
-  endDate?: string
-): EventForm => ({
-  title: 'Test Event',
-  date,
-  startTime: '09:00',
-  endTime: '10:00',
-  description: '',
-  location: '',
-  category: '업무',
-  repeat: {
-    type: repeatType,
-    interval,
-    endDate,
-  },
-  notificationTime: 10,
+// src/__tests__/unit/easy.repeatEventUtils.spec.ts (Phase 1용)
+describe('반복 유형 선택 기능', () => {
+  describe('UI 렌더링', () => {
+    it('RT-1: 반복 체크박스 OFF 시 반복 옵션 숨김', () => { });
+    it('RT-2: 반복 체크박스 ON 시 반복 옵션 표시', () => { });
+    it('RT-3: 반복 유형 드롭다운에 4개 옵션 표시', () => { });
+    it('RT-4: 반복 간격 입력에 min=1 제한', () => { });
+  });
+
+  describe('반복 유형 선택', () => {
+    it('RS-1: 매일(daily) 선택 → 상태 업데이트', () => { });
+    it('RS-2: 매주(weekly) 선택 → 상태 업데이트', () => { });
+    it('RS-3: 매월(monthly) 선택 → 상태 업데이트', () => { });
+    it('RS-4: 매년(yearly) 선택 → 상태 업데이트', () => { });
+  });
+
+  describe('반복 간격 입력', () => {
+    it('RI-1: 간격 1 입력', () => { });
+    it('RI-2: 간격 2 입력', () => { });
+    it('RI-3: 간격 0 입력 불가 (UI 제한)', () => { });
+  });
+
+  describe('반복 종료일 선택', () => {
+    it('RE-1: 종료일 미입력 (선택사항)', () => { });
+    it('RE-2: 종료일 입력 예시', () => { });
+  });
 });
 ```
-
----
-
-## 5. 실행 순서 제안
-
-### Phase 1: 기본 기능 (P0)
-1. **validateRepeatEndDate 구현 및 테스트** (EC-1, EC-2, EC-3)
-2. **Happy Path - daily, weekly** (HP-1, HP-2, HP-3, HP-4)
-
-### Phase 2: 월/년 반복 (P0)
-3. **Happy Path - monthly, yearly** (HP-5, HP-6, HP-7, HP-8)
-
-### Phase 3: 경계 조건 (P1)
-4. **Boundary Cases - 기본** (BC-1, BC-2, BC-3, BC-4)
-5. **Boundary Cases - 월말** (BC-5, BC-6, BC-7, BC-8)
-
-### Phase 4: 특수 날짜 (P0)
-6. **Special Cases** (SC-1 ~ SC-6)
 
 ---
 
@@ -306,5 +231,7 @@ const createEvent = (
 
 이 테스트 설계를 바탕으로 test-code-writer 에이전트가 실제 테스트 코드를 작성합니다.
 
-**생성될 파일**: `src/__tests__/unit/easy.repeatEventUtils.spec.ts`
-**총 테스트 수**: 25개 + 3개 공통 검증 = 28개
+**생성될 파일**: `src/__tests__/unit/easy.repeatEventUtils.spec.ts` (Phase 1용)
+**총 테스트 수**: 13개
+
+**주의**: Phase 2 이후에 `generateRepeatDates`, `validateRepeatEndDate` 함수 테스트는 별도 파일에서 작성될 예정입니다.
