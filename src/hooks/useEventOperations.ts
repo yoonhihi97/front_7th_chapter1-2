@@ -154,5 +154,27 @@ export const useEventOperations = (editing: boolean, onSave?: () => void) => {
     }
   };
 
-  return { events, fetchEvents, saveEvent, deleteEvent, updateRecurringEvents };
+  /**
+   * 같은 repeat.id를 가진 모든 반복 일정을 삭제합니다.
+   * @param repeatId - 반복 시리즈 ID
+   */
+  const deleteRecurringEvents = async (repeatId: string) => {
+    try {
+      const response = await fetch(`/api/recurring-events/${repeatId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete recurring events');
+      }
+
+      await fetchEvents();
+      enqueueSnackbar('일정이 삭제되었습니다.', { variant: 'info' });
+    } catch (error) {
+      console.error('Error deleting recurring events:', error);
+      enqueueSnackbar('일정 삭제 실패', { variant: 'error' });
+    }
+  };
+
+  return { events, fetchEvents, saveEvent, deleteEvent, updateRecurringEvents, deleteRecurringEvents };
 };

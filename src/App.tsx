@@ -99,7 +99,7 @@ function App() {
     editEvent,
   } = useEventForm();
 
-  const { events, saveEvent, deleteEvent, updateRecurringEvents } = useEventOperations(
+  const { events, saveEvent, deleteEvent, updateRecurringEvents, deleteRecurringEvents } = useEventOperations(
     Boolean(editingEvent),
     () => {
       setEditingEvent(null);
@@ -114,6 +114,8 @@ function App() {
   const [isOverlapDialogOpen, setIsOverlapDialogOpen] = useState(false);
   const [overlappingEvents, setOverlappingEvents] = useState<Event[]>([]);
   const [isEditRepeatDialogOpen, setIsEditRepeatDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
 
   const { enqueueSnackbar } = useSnackbar();
 
@@ -177,6 +179,49 @@ function App() {
     };
 
     await updateRecurringEvents(editingEvent.repeat.id, updateData);
+  };
+
+  /**
+   * 삭제 버튼 클릭 시 호출됩니다.
+   * 반복 일정이면 다이얼로그를 표시하고, 단일 일정이면 즉시 삭제합니다.
+   */
+  const handleDeleteClick = (event: Event) => {
+    if (event.repeat.type !== 'none') {
+      // 반복 일정: 다이얼로그 표시
+      setEventToDelete(event);
+      setIsDeleteDialogOpen(true);
+    } else {
+      // 단일 일정: 즉시 삭제
+      deleteEvent(event.id);
+    }
+  };
+
+  /**
+   * 삭제 다이얼로그에서 "예" 버튼 클릭 시 호출됩니다.
+   * 해당 일정만 삭제합니다.
+   */
+  const handleConfirmDelete = async () => {
+    if (!eventToDelete) return;
+
+    await deleteEvent(eventToDelete.id);
+    setIsDeleteDialogOpen(false);
+    setEventToDelete(null);
+  };
+
+  /**
+   * 삭제 다이얼로그에서 "아니오" 버튼 클릭 시 호출됩니다.
+   * 반복 시리즈 전체를 삭제합니다.
+   */
+  const handleCancelDelete = async () => {
+    if (!eventToDelete || !eventToDelete.repeat.id) {
+      setIsDeleteDialogOpen(false);
+      setEventToDelete(null);
+      return;
+    }
+
+    await deleteRecurringEvents(eventToDelete.repeat.id);
+    setIsDeleteDialogOpen(false);
+    setEventToDelete(null);
   };
 
   /**
@@ -674,7 +719,7 @@ function App() {
                     <IconButton aria-label="Edit event" onClick={() => editEvent(event)}>
                       <Edit />
                     </IconButton>
-                    <IconButton aria-label="Delete event" onClick={() => deleteEvent(event.id)}>
+                    <IconButton aria-label="Delete event" onClick={() => handleDeleteClick(event)}>
                       <Delete />
                     </IconButton>
                   </Stack>
@@ -738,6 +783,20 @@ function App() {
             예
           </Button>
           <Button onClick={handleEditAllEvents}>아니오</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* 반복 일정 삭제 다이얼로그 */}
+      <Dialog open={isDeleteDialogOpen} onClose={() => setIsDeleteDialogOpen(false)}>
+        <DialogTitle>일정 삭제</DialogTitle>
+        <DialogContent>
+          <DialogContentText>해당 일정만 삭제하시겠어요?</DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCancelDelete}>아니오</Button>
+          <Button onClick={handleConfirmDelete} variant="contained" color="error">
+            예
+          </Button>
         </DialogActions>
       </Dialog>
 
