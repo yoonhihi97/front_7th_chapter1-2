@@ -44,17 +44,13 @@ export const handlers = [
     // 같은 repeatId를 가진 모든 일정 찾기 및 수정
     const updatedEvents = events.map((event) => {
       if (event.repeat?.id === repeatId) {
+        // updateData의 정의된 필드만 병합 (id, date, repeat는 유지)
         return {
           ...event,
-          title: updateData.title !== undefined ? updateData.title : event.title,
-          startTime: updateData.startTime !== undefined ? updateData.startTime : event.startTime,
-          endTime: updateData.endTime !== undefined ? updateData.endTime : event.endTime,
-          description: updateData.description !== undefined ? updateData.description : event.description,
-          location: updateData.location !== undefined ? updateData.location : event.location,
-          category: updateData.category !== undefined ? updateData.category : event.category,
-          notificationTime:
-            updateData.notificationTime !== undefined ? updateData.notificationTime : event.notificationTime,
-          // id, date, repeat는 유지
+          ...updateData,
+          id: event.id,
+          date: event.date,
+          repeat: event.repeat,
         };
       }
       return event;

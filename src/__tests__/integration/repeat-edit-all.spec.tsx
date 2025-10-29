@@ -36,7 +36,10 @@ const setup = () => {
  * @param user - userEvent 인스턴스
  * @param newTitle - 수정할 제목
  */
-const editEventAndOpenDialog = async (user: ReturnType<typeof userEvent.setup>, newTitle: string) => {
+const editEventAndOpenDialog = async (
+  user: ReturnType<typeof userEvent.setup>,
+  newTitle: string
+) => {
   const editButtons = await screen.findAllByLabelText('Edit event');
   await user.click(editButtons[0]);
 
@@ -76,11 +79,14 @@ const setupMockHandlerRecurringUpdate = (initEvents: Event[] = []) => {
             title: updateData.title !== undefined ? updateData.title : event.title,
             startTime: updateData.startTime !== undefined ? updateData.startTime : event.startTime,
             endTime: updateData.endTime !== undefined ? updateData.endTime : event.endTime,
-            description: updateData.description !== undefined ? updateData.description : event.description,
+            description:
+              updateData.description !== undefined ? updateData.description : event.description,
             location: updateData.location !== undefined ? updateData.location : event.location,
             category: updateData.category !== undefined ? updateData.category : event.category,
             notificationTime:
-              updateData.notificationTime !== undefined ? updateData.notificationTime : event.notificationTime,
+              updateData.notificationTime !== undefined
+                ? updateData.notificationTime
+                : event.notificationTime,
             // id, date, repeat는 유지
           };
         }
