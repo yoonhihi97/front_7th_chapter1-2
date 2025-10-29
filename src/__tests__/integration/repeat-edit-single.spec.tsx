@@ -79,7 +79,10 @@ describe('반복 일정 단일 수정 기능 (1단계)', () => {
    * @param user - userEvent 인스턴스
    * @param newTitle - 수정할 제목
    */
-  const editEventAndOpenDialog = async (user: ReturnType<typeof userEvent.setup>, newTitle: string) => {
+  const editEventAndOpenDialog = async (
+    user: ReturnType<typeof userEvent.setup>,
+    newTitle: string
+  ) => {
     const editButton = await screen.findByLabelText('Edit event');
     await user.click(editButton);
 
