@@ -176,5 +176,12 @@ export const useEventOperations = (editing: boolean, onSave?: () => void) => {
     }
   };
 
-  return { events, fetchEvents, saveEvent, deleteEvent, updateRecurringEvents, deleteRecurringEvents };
+  return {
+    events,
+    fetchEvents,
+    saveEvent,
+    deleteEvent,
+    updateRecurringEvents,
+    deleteRecurringEvents,
+  };
 };

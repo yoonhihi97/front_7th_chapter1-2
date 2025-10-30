@@ -99,13 +99,11 @@ function App() {
     editEvent,
   } = useEventForm();
 
-  const { events, saveEvent, deleteEvent, updateRecurringEvents, deleteRecurringEvents } = useEventOperations(
-    Boolean(editingEvent),
-    () => {
+  const { events, saveEvent, deleteEvent, updateRecurringEvents, deleteRecurringEvents } =
+    useEventOperations(Boolean(editingEvent), () => {
       setEditingEvent(null);
       resetForm();
-    }
-  );
+    });
 
   const { notifications, notifiedEvents, setNotifications } = useNotifications(events);
   const { view, setView, currentDate, holidays, navigate } = useCalendarView();
